@@ -2,15 +2,14 @@
 <head>
     <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
     <title>Open - Closed</title>
-    <link href="./images/s2.ico"                                   type="image/x-icon" rel="specs2 icon"/>
-    <link href="./css/opensans-fonts.css"                          type="text/css"     rel="stylesheet" />
-    <link href="./css/bootstrap.min.css"                           type="text/css"     rel="stylesheet" />
-    <link href="./css/font-awesome.min.css"                        type="text/css"     rel="stylesheet" />
-    <link href="./css/prettify.css"                                type="text/css"     rel="stylesheet" />
-    <link href="./css/tabber.css"                                  type="text/css"     rel="stylesheet" />
-    <link href="./css/tipuesearch.css"                             type="text/css"     rel="stylesheet" />
-    <link href="./css/specs2.css"                                  type="text/css"     rel="stylesheet" />
-    <link href="./css/specs2-user.css"                             type="text/css"     rel="stylesheet" />
+    <link href="./css/opensans-fonts.css"                          type="text/css" rel="stylesheet" />
+    <link href="./css/bootstrap.min.css"                           type="text/css" rel="stylesheet" />
+    <link href="./css/font-awesome.min.css"                        type="text/css" rel="stylesheet" />
+    <link href="./css/prettify.css"                                type="text/css" rel="stylesheet" />
+    <link href="./css/tabber.css"                                  type="text/css" rel="stylesheet" />
+    <link href="./css/tipuesearch.css"                             type="text/css" rel="stylesheet" />
+    <link href="./css/specs2.css"                                  type="text/css" rel="stylesheet" />
+    <link href="./css/specs2-user.css"                             type="text/css" rel="stylesheet" />
 
     <script src="./javascript/jquery.js"                           type="text/javascript"></script>
     <script src="./javascript/jquery.jstree.js"                    type="text/javascript"></script>
@@ -64,7 +63,7 @@ def putAndTell[R](i: Int)(implicit s: StateInt &lt;= R, w: WriterString &lt;= R)
 <li><p>you might want to “seal” the stack to declare exactly with which set of effects you want to be working</p></li>
 </ul>
 <p>In that case you can specify an effect stack:</p>
-<pre><code class="prettyprint">import org.specs2.eff._
+<pre><code class="prettyprint">import org.atnos.eff._
 import Effects._
 import scalaz.syntax.all._
 import scalaz._
@@ -92,7 +91,7 @@ def putAndTell(i: Int): Eff[S, Int] =
 <li><p><code class="prettyprint">StateInt</code> is a member of <code class="prettyprint">S</code></p></li>
 <li><p>if you remove <code class="prettyprint">StateInt</code> from <code class="prettyprint">S</code>, you are left with the <code class="prettyprint">WriterString |: NoEffect</code> stack</p></li>
 </ul>
-<p><br/> Now you can learn <link class="ok"><a href="org.specs2.site.CreateEffects.html" tooltip="" class="ok">how to create effects</a></link></p>
+<p><br/> Now you can learn <link class="ok"><a href="org.atnos.site.CreateEffects.html" tooltip="" class="ok">how to create effects</a></link></p>
 </div>
 
 </div>
