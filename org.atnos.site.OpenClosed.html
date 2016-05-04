@@ -64,7 +64,7 @@ def putAndTell[R](i: Int)(implicit s: State[Int, ?] &lt;= R, w: Writer[String, ?
 </ul>
 <p>In that case you can specify an effect stack:</p>
 <pre><code class="prettyprint">import org.atnos.eff._, all._
-import scalaz.syntax.all._
+
 import scalaz._
 
 type S = State[Int, ?] |: Writer[String, ?] |: NoEffect

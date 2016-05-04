@@ -62,8 +62,7 @@ type Stack = Reader[Int, ?] |: Writer[String, ?] |: Eval |: NoEffect</code></pre
 <li><p>an <code class="prettyprint">Eval</code> effect to only compute values on demand (a bit like lazy values)</p></li>
 </ul>
 <p>Now we can write a program with those 3 effects, using the primitive operations provided by <code class="prettyprint">ReaderEffect</code>, <code class="prettyprint">WriterEffect</code> and <code class="prettyprint">EvalEffect</code>:</p>
-<pre><code class="prettyprint">import scalaz.syntax.all._
-import org.atnos.eff.all._
+<pre><code class="prettyprint">import org.atnos.eff.all._
 import org.atnos.eff.syntax.all._
 import Stack._
   import Stack._
