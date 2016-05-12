@@ -38,7 +38,7 @@
 <h1>Out of the box</h1>
 <div id="tipue_search_content"></div>
 
-<p>This library comes with the following effects:</p>
+<p>This library comes with a few available effects:</p>
 <table style="width:76%;">
 <colgroup>
 <col width="13%" />
@@ -60,56 +60,48 @@
 <td align="left">an effect for optional computations, stopping when there’s no available value</td>
 </tr>
 <tr class="odd">
-<td align="left"><code class="prettyprint">\/Effect</code></td>
+<td align="left"><code class="prettyprint">DisjunctionEffect</code></td>
 <td align="left">an effect for computations with failures, stopping when there is a failure</td>
 </tr>
 <tr class="even">
-<td align="left"><code class="prettyprint">ValidateEffect</code></td>
-<td align="left">an effect for computations with failures, allowing to continue computations and to collect failures</td>
+<td align="left"><code class="prettyprint">ErrorEffect</code></td>
+<td align="left">a mix of Eval and Disjunction, catching exceptions and returning them as failures</td>
 </tr>
 <tr class="odd">
-<td align="left"><code class="prettyprint">ErrorEffect</code></td>
-<td align="left">a mix of Eval and /, catching exceptions and returning them as failures</td>
-</tr>
-<tr class="even">
 <td align="left"><code class="prettyprint">ReaderEffect</code></td>
 <td align="left">an effect for depending on a configuration or an environment</td>
 </tr>
-<tr class="odd">
+<tr class="even">
 <td align="left"><code class="prettyprint">WriterEffect</code></td>
 <td align="left">an effect to log messages</td>
 </tr>
-<tr class="even">
+<tr class="odd">
 <td align="left"><code class="prettyprint">StateEffect</code></td>
 <td align="left">an effect to pass state around</td>
 </tr>
-<tr class="odd">
-<td align="left"><code class="prettyprint">ListEffect</code></td>
-<td align="left">an effect for computations returning several values</td>
-</tr>
 <tr class="even">
-<td align="left"><code class="prettyprint">ChooseEffect</code></td>
-<td align="left">an effect for modeling non-determinism</td>
+<td align="left"><code class="prettyprint">ListEffect</code></td>
+<td align="left">an effect for computations returning several values (for non-determinism)</td>
 </tr>
 </tbody>
 </table>
-<p><small>(from <code class="prettyprint">org.atnos.eff._</code>)</small></p>
+<p><small>(from <code class="prettyprint">org.atnos._</code>)</small></p>
 <p>Each object provides methods to create effects and to interpret them.</p>
 <h3 id="eval">Eval</h3>
 <p>This effect is a very simple one. It allows the delayed execution of computations and it can serve as some sort of overall <code class="prettyprint">IO</code> effect.</p>
 <p>Two methods are available to execute this effect:</p>
 <ul>
-<li><p><code class="prettyprint">runEval[R &lt;: Effects, A](r: Eff[Eval |: R, A]): Eff[R, A]</code> to just execute the computations</p></li>
-<li><p><code class="prettyprint">attemptEval[R &lt;: Effects, A](r: Eff[Eval |: R, A]): Eff[R, Throwable \/ A]</code> to execute the computations but also catch any <code class="prettyprint">Throwable</code> that would be thrown</p></li>
+<li><p><code class="prettyprint">runEval[R &lt;: Effects, A](r: Eff[Eval[?] |: R, A]): Eff[R, A]</code> to just execute the computations</p></li>
+<li><p><code class="prettyprint">attemptEval[R &lt;: Effects, A](r: Eff[Eval[?] |: R, A]): Eff[R, Throwable \/ A]</code> to execute the computations but also catch any <code class="prettyprint">Throwable</code> that would be thrown</p></li>
 </ul>
-<pre><code class="prettyprint">import org.atnos.eff._, all._, syntax.all._
-
-delay(1 + 1).runEval.run</code></pre>
-<p><code class="prettyprint">&gt; 2</code></p>
+<p><em>Note</em>: the <code class="prettyprint">?</code> syntax comes from the <a href="https://github.com/non/kind-projector">kind-projector</a> project and allows us to avoid type lambdas.</p>
 <h3 id="option">Option</h3>
 <p>Adding an <code class="prettyprint">Option</code> effect in your stack allows to stop computations when necessary. If you create a value with <code class="prettyprint">some(a)</code> this value will be used downstream but if you use <code class="prettyprint">none</code> all computations will stop:</p>
-<pre><code class="prettyprint">import org.atnos.eff._, all._, syntax.all._
-
+<pre><code class="prettyprint">import org.atnos.eff._
+import Eff._
+import Effects._
+import OptionEffect._
+import scalaz.syntax.all._
 
 /**
  * Stack declaration
@@ -126,18 +118,22 @@ def addKeys(key1: String, key2: String): Eff[S, Int] = for {
   b &lt;- fromOption(map.get(key2))
 } yield a + b
 
-(addKeys(&quot;key1&quot;, &quot;key2&quot;).runOption.run, addKeys(&quot;key1&quot;, &quot;missing&quot;).runOption.run)</code></pre>
+(run(runOption(addKeys(&quot;key1&quot;, &quot;key2&quot;))), run(runOption(addKeys(&quot;key1&quot;, &quot;missing&quot;))))</code></pre>
 <p><code class="prettyprint">&gt; (Some(30),None)</code></p>
 <h3 id="disjunction">Disjunction</h3>
 <p>The <code class="prettyprint">Disjunction</code> effect is similar to the <code class="prettyprint">Option</code> effect but adds the possibility to specify why a computation stopped:</p>
-<pre><code class="prettyprint">import org.atnos.eff._, all._, syntax.all._
-
+<pre><code class="prettyprint">import org.atnos.eff._
+import Eff._
+import Effects._
+import DisjunctionEffect._
+import scalaz.syntax.all._
 import scalaz.\/
 
 /**
  * Stack declaration
  */
-type S = (String \/ ?) |: NoEffect
+type DisjunctionString[A] = String \/ A
+type S = DisjunctionString |: NoEffect
 
 // compute with this stack
 val map: Map[String, Int] =
@@ -145,53 +141,14 @@ val map: Map[String, Int] =
 
 // get 2 keys from the map and add the corresponding values
 def addKeys(key1: String, key2: String): Eff[S, Int] = for {
-  a &lt;- optionDisjunction(map.get(key1), s&quot;&#39;$key1&#39; not found&quot;)
-  b &lt;- optionDisjunction(map.get(key2), s&quot;&#39;$key2&#39; not found&quot;)
+  a &lt;- fromOption(map.get(key1), s&quot;&#39;$key1&#39; not found&quot;)
+  b &lt;- fromOption(map.get(key2), s&quot;&#39;$key2&#39; not found&quot;)
 } yield a + b
 
-(addKeys(&quot;key1&quot;, &quot;key2&quot;).runDisjunction.run, addKeys(&quot;key1&quot;, &quot;missing&quot;).runDisjunction.run)</code></pre>
+(run(runDisjunction(addKeys(&quot;key1&quot;, &quot;key2&quot;))), run(runDisjunction(addKeys(&quot;key1&quot;, &quot;missing&quot;))))</code></pre>
 <p><code class="prettyprint">&gt; (\/-(30),-\/('missing' not found))</code></p>
-<p><em>Note</em>: the <code class="prettyprint">?</code> syntax comes from the <a href="https://github.com/non/kind-projector">kind-projector</a> project and allows us to avoid type lambdas.</p>
-<p>A <code class="prettyprint">catchLeft</code> method can also be used to intercept an error and possibly recover from it:</p>
-<pre><code class="prettyprint">case class TooBig(value: Int)
-type E = (TooBig \/ ?) |: NoEffect
-
-val i = 7
-
-val value: Eff[E, Int] =
-  if (i &gt; 5) left[E, TooBig, Int](TooBig(i))
-  else       right[E, TooBig, Int](i)
-
-val action: Eff[E, Int] = catchLeft[E, TooBig, Int](value) { case TooBig(k) =&gt;
-  if (k &lt; 10) right[E, TooBig, Int](k)
-  else        left[E, TooBig, Int](TooBig(k))
-}
-
-action.runDisjunction.run ==== \/-(7)</code></pre>
-<p><em>Note</em>: the type annotations on <code class="prettyprint">left</code> and <code class="prettyprint">right</code> can be avoided by adding an implicit declaration in scope. You can learn more about this in the <link class="ok"><a href="org.atnos.site.Implicits.html" tooltip="" class="ok">Implicits</a></link> section.</p>
-<h3 id="validate">Validate</h3>
-<p>The <code class="prettyprint">Validate</code> effect is similar to the <code class="prettyprint">\/</code> effect but let you accumulate failures:</p>
-<pre><code class="prettyprint">import org.atnos.eff._, all._, syntax.all._
-
-
-/**
- * Stack declaration
- */
-type S = Validate[String, ?] |: NoEffect
-
-def checkPositiveInt(i: Int): Eff[S, Unit] =
-  validateCheck(i &gt;= 0, s&quot;$i is not positive&quot;)
-
-def checkPositiveInts(a: Int, b: Int, c: Int): Eff[S, (Int, Int, Int)] = for {
-  _ &lt;- checkPositiveInt(a)
-  _ &lt;- checkPositiveInt(b)
-  _ &lt;- checkPositiveInt(c)
-} yield (a, b, c)
-
-checkPositiveInts(1, -3, -2).runNel.run</code></pre>
-<p><code class="prettyprint">&gt; -\/(NonEmpty[-3 is not positive,-2 is not positive])</code></p>
 <h3 id="error">Error</h3>
-<p>The <code class="prettyprint">Error</code> effect is both an <code class="prettyprint">Eval</code> effect and a <code class="prettyprint">\/</code> one with <code class="prettyprint">Throwable \/ F</code> on the “left” side. The idea is to represent computations which can fail, either with an exception or a failure. You can:</p>
+<p>The <code class="prettyprint">Error</code> effect is both an <code class="prettyprint">Eval</code> effect and a <code class="prettyprint">Disjunction</code> one with <code class="prettyprint">Throwable \/ F</code> on the “left” side. The idea is to represent computations which can fail, either with an exception or a failure. You can:</p>
 <ul>
 <li><p>create delayed computations with <code class="prettyprint">ok</code></p></li>
 <li><p>fail with <code class="prettyprint">fail(f: F)</code> where <code class="prettyprint">F</code> is the failure type</p></li>
@@ -204,13 +161,12 @@ checkPositiveInts(1, -3, -2).runNel.run</code></pre>
 <li><p><code class="prettyprint">whenFailed</code> does the same thing than <code class="prettyprint">orElse</code> but uses the error for <code class="prettyprint">action1</code> to decide which action to run next</p></li>
 </ul>
 <p>When you run an <code class="prettyprint">Error</code> effect you get back an <code class="prettyprint">Error \/ A</code> where <code class="prettyprint">Error</code> is a type alias for <code class="prettyprint">Throwable \/ Failure</code>.</p>
-<p>The <code class="prettyprint">Error</code> object implements this effect with <code class="prettyprint">String</code> as the <code class="prettyprint">Failure</code> type but you are encouraged to create our own failure datatype and extend the <code class="prettyprint">Error[MyFailureDatatype]</code> trait.</p>
+<p>The <code class="prettyprint">Error</code> object implements this effect with <code class="prettyprint">String</code> as the <code class="prettyprint">Failure</code> type but you are encouraged to create our own failure datatype and extends the <code class="prettyprint">Error[MyFailureDatatype]</code> trait.</p>
 <h3 id="reader">Reader</h3>
 <p>The <code class="prettyprint">Reader</code> effect is used to request values from an “environment”. The main method is <code class="prettyprint">ask</code> to get the current environment (or “configuration” if you prefer to see it that way) and you can run an effect stack containing a <code class="prettyprint">Reader</code> effect by providing a value for the environment with the <code class="prettyprint">runReader</code> method.</p>
 <p>It is also possible to query several independent environments in the same effect stack by “tagging” them:</p>
-<pre><code class="prettyprint">import org.atnos.eff._, all._, syntax.all._
+<pre><code class="prettyprint">import ReaderEffect._
 import scalaz._
-
 
 trait Port1
 trait Port2
@@ -225,26 +181,8 @@ type S = R1 |: R2 |: NoEffect
   p2 &lt;- askTagged[S, Port2, Int]
 } yield &quot;port1 is &quot;+p1+&quot;, port2 is &quot;+p2
 
-getPorts.runReaderTagged(80).runReaderTagged(50).run</code></pre>
+run(runTaggedReader(50)(runTaggedReader(80)(getPorts)))</code></pre>
 <p><code class="prettyprint">&gt; port1 is 80, port2 is 50</code></p>
-<p>You can also inject a “local” reader into a “bigger” one:</p>
-<pre><code class="prettyprint">import org.atnos.eff._, all._, syntax.all._
-import scalaz._
-
-
-case class Conf(host: String, port: Int)
-
-type R1[A] = Reader[Int, A]
-type R2[A] = Reader[Conf, A]
-
-type S = R1 |: NoEffect
-
-val getPort: Eff[S, String] = for {
-  p1 &lt;- ask[S, Int]
-} yield &quot;the port is &quot; + p1
-
-getPort.localReader((_: Conf).port).runReader(Conf(&quot;prod&quot;, 80)).run</code></pre>
-<p><code class="prettyprint">&gt; the port is 80</code></p>
 <h3 id="writer">Writer</h3>
 <p>The <code class="prettyprint">Writer</code> effect is classically used to log values alongside computations. However it generally suffers from the following drawbacks:</p>
 <ul>
@@ -257,16 +195,16 @@ getPort.localReader((_: Conf).port).runReader(Conf(&quot;prod&quot;, 80)).run</c
 <li><p><code class="prettyprint">runWriterFold</code> uses a <code class="prettyprint">Fold</code> to act on each value, keeping some internal state between each invocation</p></li>
 </ul>
 <p>You can then define your own custom <code class="prettyprint">Fold</code> to log the values to a file:</p>
-<pre><code class="prettyprint">import org.atnos.eff._, all._, syntax.all._
+<pre><code class="prettyprint">import java.io.PrintWriter
+import WriterEffect._
 
-import java.io.PrintWriter
-
-type S = Writer[String, ?] |: NoEffect
+type W[A] = Writer[String, A]
+type S = W |: NoEffect
 
 val action: Eff[S, Int] = for {
- a &lt;- EffMonad[S].point(1)
+ a &lt;- EffMonad[S].pure(1)
  _ &lt;- tell(&quot;first value &quot;+a)
- b &lt;- EffMonad[S].point(2)
+ b &lt;- EffMonad[S].pure(2)
  _ &lt;- tell(&quot;second value &quot;+b)
 
 } yield a + b
@@ -283,7 +221,7 @@ def fileFold(path: String) = new Fold[String, Unit] {
     s.close
 }
 
-action.runWriterFold(fileFold(&quot;target/log&quot;)).run
+run(runWriterFold(action)(fileFold(&quot;target/log&quot;)))
 io.Source.fromFile(&quot;target/log&quot;).getLines.toList</code></pre>
 <p><code class="prettyprint">&gt; List(first value 1, second value 2)</code></p>
 <h3 id="state">State</h3>
@@ -293,7 +231,8 @@ io.Source.fromFile(&quot;target/log&quot;).getLines.toList</code></pre>
 <li><p><code class="prettyprint">put</code> set a new state</p></li>
 </ul>
 <p>Let’s see an example showing that we can also use tags to track different states at the same time:</p>
-<pre><code class="prettyprint">import org.atnos.eff._, all._, syntax.all._
+<pre><code class="prettyprint">import StateEffect._
+import scalaz.{State =&gt; _, _}
 
 trait Var1
 trait Var2
@@ -312,44 +251,12 @@ val swapVariables: Eff[S, String] = for {
   w2 &lt;- getTagged[S, Var2, Int]
 } yield &quot;initial: &quot;+(v1, v2).toString+&quot;, final: &quot;+(w1, w2).toString
 
-swapVariables.evalStateTagged(10).evalStateTagged(50).run</code></pre>
+run(evalTagged(50)(evalTagged(10)(swapVariables)))</code></pre>
 <p><code class="prettyprint">&gt; initial: (10,50), final: (50,10)</code></p>
 <p>In the example above we have used an <code class="prettyprint">eval</code> method to get the <code class="prettyprint">A</code> in <code class="prettyprint">Eff[R, A]</code> but it is also possible to get both the value and the state with <code class="prettyprint">run</code> or only the state with <code class="prettyprint">exec</code>.</p>
-<p>Instead of tagging state effects it is also possible to transform a State effect acting on a “small” state into a State effect acting on a “bigger” state:</p>
-<pre><code class="prettyprint">import org.atnos.eff._, all._, syntax.all._
-
-
-type Count[A] = State[Int, A]
-type Sum[A] = State[Int, A]
-type Mean[A] = State[(Int, Int), A]
-
-type S1 = Count |: NoEffect
-type S2 = Sum |: NoEffect
-type S = Mean |: NoEffect
-
-def count(list: List[Int]): Eff[S1, String] = for {
-  _ &lt;- put(list.size)
-} yield s&quot;there are ${list.size} values&quot;
-
-def sum(list: List[Int]): Eff[S2, String] = {
-  val s = if (list.isEmpty) 0 else list.sum
-  for {
-    _ &lt;- put(s)
-  } yield s&quot;the sum is $s&quot;
-}
-
-def mean(list: List[Int]): Eff[S, String] = for {
-  m1 &lt;- count(list).lensState((_:(Int, Int))._1, (s: (Int,Int), i: Int) =&gt; (i, s._2))
-  m2 &lt;- sum(list).lensState((_:(Int, Int))._2, (s: (Int, Int), i: Int) =&gt; (s._1, i))
-} yield m1+&quot;\n&quot;+m2
-
-mean(List(1, 2, 3)).runState((0, 0)).run</code></pre>
-<pre><code class="prettyprint">&gt; (there are 3 values
-the sum is 6,(3,6))</code></pre>
 <h3 id="list">List</h3>
-<p>The <code class="prettyprint">List</code> effect is used for computations which may return several values. A simple example using this effect would be:</p>
-<pre><code class="prettyprint">import org.atnos.eff._, all._, syntax.all._
-
+<p>The <code class="prettyprint">List</code> effect is used for non-deterministic computations, that is computations which may return several values. A simple example using this effect would be:</p>
+<pre><code class="prettyprint">import ListEffect._
 
 type S = List |: NoEffect
 
@@ -362,35 +269,9 @@ def pairsBiggerThan(list: List[Int], n: Int): Eff[S, (Int, Int)] = for {
            else           empty
 } yield found
 
-pairsBiggerThan(List(1, 2, 3, 4), 5).runList.run</code></pre>
+run(runList(pairsBiggerThan(List(1, 2, 3, 4), 5)))</code></pre>
 <p><code class="prettyprint">&gt; List((2,4), (3,3), (3,4), (4,2), (4,3), (4,4))</code></p>
-<h3 id="choose">Choose</h3>
-<p>The <code class="prettyprint">Choose</code> effect is used for non-deterministic computations. With the <code class="prettyprint">Choose</code> effect you can model computations which either:</p>
-<ul>
-<li>return no result at all</li>
-<li>choose between 2 different computations</li>
-</ul>
-<p><code class="prettyprint">Choose</code> is actually a generalization of <code class="prettyprint">List</code> where instead of “exploring” all the branches we might “cut” some of them. That behaviour is controlled by the <code class="prettyprint">Alternative[F]</code> instance you use when running <code class="prettyprint">Choose</code>.</p>
-<p>For example if we take <code class="prettyprint">List</code> to run a similar example as before, we get the list of all the accepted pairs:</p>
-<pre><code class="prettyprint">import org.atnos.eff._, all._, syntax.all._
-
-
-type S = Choose |: NoEffect
-
-// create all the possible pairs for a given list
-// where the sum is greater than a value
-def pairsBiggerThan(list: List[Int], n: Int): Eff[S, (Int, Int)] = for {
-  a &lt;- chooseFrom(list)
-  b &lt;- chooseFrom(list)
-  found &lt;- if (a + b &gt; n) EffMonad[S].point((a, b))
-           else           zero
-} yield found
-
-import scalaz.std.list._
-
-pairsBiggerThan(List(1, 2, 3, 4), 5).runChoose.run</code></pre>
-<p><code class="prettyprint">&gt; List((2,4), (3,3), (3,4), (4,2), (4,3), (4,4))</code></p>
-<p><br/> Now you can learn how to <link class="ok"><a href="org.atnos.site.CreateEffects.html" tooltip="" class="ok">create your own effects</a></link>.</p>
+<p><br/> Now you can learn about <link class="ok"><a href="org.atnos.site.OpenClosed.html" tooltip="" class="ok">open/closed effect stacks</a></link>.</p>
 </div>
 
 </div>
